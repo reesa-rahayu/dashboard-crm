@@ -53,24 +53,7 @@ st.markdown("""
 def load_data():
     # You can replace this with file upload or direct CSV loading
     # For now, I'll create sample data based on your CSV structure
-    data = {
-        'Customer ID': range(101, 451),
-        'Gender': np.random.choice(['Male', 'Female'], 350),
-        'Age': np.random.randint(25, 50, 350),
-        'City': np.random.choice(['New York', 'Los Angeles', 'Chicago', 'San Francisco', 'Miami', 'Houston'], 350),
-        'Membership Type': np.random.choice(['Gold', 'Silver', 'Bronze'], 350, p=[0.3, 0.4, 0.3]),
-        'Total Spend': np.random.normal(900, 300, 350),
-        'Items Purchased': np.random.randint(5, 25, 350),
-        'Average Rating': np.random.normal(4.0, 0.5, 350),
-        'Discount Applied': np.random.choice([True, False], 350),
-        'Days Since Last Purchase': np.random.randint(5, 65, 350),
-        'Satisfaction Level': np.random.choice(['Satisfied', 'Neutral', 'Unsatisfied'], 350, p=[0.5, 0.3, 0.2])
-    }
-    
-    df = pd.DataFrame(data)
-    df['Average Rating'] = np.clip(df['Average Rating'], 1, 5)
-    df['Total Spend'] = np.clip(df['Total Spend'], 300, 2000)
-    
+    df = pd.read_csv('customer.csv')   
     return df
 
 # RFM Analysis
@@ -160,10 +143,9 @@ def main():
     df = load_data()
     
     # Sidebar
-    st.sidebar.title("📊 Dashboard Navigation")
-    page = st.sidebar.selectbox(
-        "Choose Analysis Type",
-        ["Overview", "Customer Segmentation (RFM)", "Churn Analysis", "Customer Insights", "Strategic Recommendations"]
+    page = st.sidebar.radio(
+    "📊 Dashboard Navigation",
+    ["Overview", "Customer Segmentation (RFM)", "Churn Analysis", "Customer Insights", "Strategic Recommendations"]
     )
     
     if page == "Overview":
@@ -172,22 +154,18 @@ def main():
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Total Customers", f"{len(df):,}")
             st.markdown('</div>', unsafe_allow_html=True)
         
         with col2:
-            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Total Revenue", f"${df['Total Spend'].sum():,.2f}")
             st.markdown('</div>', unsafe_allow_html=True)
         
         with col3:
-            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Avg Order Value", f"${df['Total Spend'].mean():.2f}")
             st.markdown('</div>', unsafe_allow_html=True)
         
         with col4:
-            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             satisfaction_rate = (df['Satisfaction Level'] == 'Satisfied').mean() * 100
             st.metric("Satisfaction Rate", f"{satisfaction_rate:.1f}%")
             st.markdown('</div>', unsafe_allow_html=True)
@@ -342,7 +320,7 @@ def main():
         - Create targeted content for different customer segments
         """)
         st.markdown('</div>', unsafe_allow_html=True)
-    
+
     elif page == "Customer Insights":
         st.header("🔍 Customer Insights & Behavior Analysis")
         
