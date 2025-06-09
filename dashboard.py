@@ -409,14 +409,6 @@ def main():
         
         col1, col2 = st.columns(2)
         
-        # Feature importance for churn prediction
-        fig2 = px.bar(feature_importance.head(8), x='Importance', y='Feature',
-                        title="Faktor yang Mempengaruhi Churn Pelanggan",
-                        orientation='h',
-                        color='Importance',
-                        color_continuous_scale='Viridis')
-        st.plotly_chart(fig2, use_container_width=True)
-        
         # Churn risk segments
         st.subheader("🎯 Identifikasi Pelanggan Berisiko Tinggi")
         
@@ -436,6 +428,14 @@ def main():
                                       'Total Spend', 'Days Since Last Purchase', 'Satisfaction Level']].head(10)
             st.dataframe(risk_customers, use_container_width=True)
         
+        # Feature importance for churn prediction
+        fig2 = px.bar(feature_importance.head(8), x='Importance', y='Feature',
+                        title="Faktor yang Mempengaruhi Churn Pelanggan",
+                        orientation='h',
+                        color='Importance',
+                        color_continuous_scale='Viridis')
+        st.plotly_chart(fig2, use_container_width=True)
+
         # Retention strategies
         st.subheader("🛡️ Strategi Retensi")
         st.write("""
