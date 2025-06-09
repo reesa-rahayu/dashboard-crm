@@ -93,11 +93,40 @@ def main():
             st.metric("Tingkat Kepuasan", f"{satisfaction_rate:.1f}%")
             st.markdown('</div>', unsafe_allow_html=True)
         
-        st.subheader("Indikator Kinerja Utama")
-        
+        # Customer Growth and Retention
+        st.markdown("#### Customer Growth & Retention")
+        col1, col2 = st.columns(2)
+        with col1:
+            active_customers = len(df[df['Days Since Last Purchase'] <= 30])
+            st.metric("Costumer Aktif (30 days)", f"{active_customers:,}")
+
+        with col2:
+            returning_customers = len(df[df['Days Since Last Purchase'] <= 90])
+            st.metric("Returning Customers (90 days)", f"{returning_customers:,}")
+
+        # Diagrams
         col1, col2 = st.columns(2)
         
         with col1:
+            # Customer Activity Trends
+            fig = px.line(df.groupby('Days Since Last Purchase').size().reset_index(name='count'),
+                         x='Days Since Last Purchase', y='count',
+                         title='Aktivitas Customer')
+            st.plotly_chart(fig, use_container_width=True)
+
+
+            # Average item purchased and Spending
+            items_vs_spend = df.groupby('Items Purchased')['Total Spend'].mean()
+            fig2 = px.bar(x=items_vs_spend.index, y=items_vs_spend.values, labels={'x':'Jumlah Item Dibeli', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran berdasarkan Jumlah Item Dibeli')
+            st.plotly_chart(fig2, use_container_width=True)
+
+            # Average Spending with/without Discounts
+            discount_vs_spend = df.groupby('Discount Applied')['Total Spend'].mean()
+            fig1 = px.bar(x=discount_vs_spend.index, y=discount_vs_spend.values, labels={'x':'Diskon Diterapkan', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran dengan/tanpa Diskon')
+            st.plotly_chart(fig1, use_container_width=True)
+
+        
+        with col2:
             # RFM Analyis segmentation
             rfm_data = perform_rfm_analysis(df)
             df_rfm = df.merge(rfm_data[['Customer ID', 'RFM_Segment']], on='Customer ID', how='left')
@@ -105,32 +134,7 @@ def main():
             fig1 = px.pie(values=segment_counts.values, names=segment_counts.index,
                          title="Segmentasi Pelanggan RFM")
             st.plotly_chart(fig1, use_container_width=True)
-        
-        with col2:
-            # Churn Analysis Overview
-            df['Churn_Risk'] = ((df['Satisfaction Level'] == 'Unsatisfied') | 
-                            (df['Days Since Last Purchase'] > 45))
-            high_risk = df[df['Churn_Risk'] == True].sort_values('Total Spend', ascending=False)
-            if len(high_risk) > 0:
-                st.write(f"**{len(high_risk)} pelanggan** berisiko tinggi untuk churn")
-                st.write(f"**Potensi Kehilangan Pendapatan:** ${high_risk['Total Spend'].sum():.2f}")
-
-            # Churn rate by segment
-            churn_rate = df.groupby('Satisfaction Level').apply(
-                lambda x: ((x['Days Since Last Purchase'] > 45) | 
-                          (x['Satisfaction Level'] == 'Unsatisfied')).mean() * 100
-            ).reset_index()
-            churn_rate.columns = ['Satisfaction Level', 'Tingkat Churn (%)']
             
-            fig1 = px.bar(churn_rate, x='Satisfaction Level', y='Tingkat Churn (%)',
-                         title="Tingkat Churn berdasarkan Tingkat Kepuasan",
-                         color='Tingkat Churn (%)',
-                         color_continuous_scale='Reds')
-            st.plotly_chart(fig1, use_container_width=True)
-            
-        col1, col2 = st.columns(2)
-        
-        with col1:
             # Revenue by Membership Type
             membership_vs_spend = df.groupby('Membership Type')['Total Spend'].mean()
             fig1 = px.bar(x=membership_vs_spend.index, y=membership_vs_spend.values, labels={'x':'Tipe Keanggotaan', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran berdasarkan Tipe Keanggotaan')
@@ -144,21 +148,36 @@ def main():
                          color_discrete_sequence=['#2E86AB', '#A23B72', '#F18F01'])
             st.plotly_chart(fig2, use_container_width=True)
         
-        with col2:
-            # Average Spending with/without Discounts
-            discount_vs_spend = df.groupby('Discount Applied')['Total Spend'].mean()
-            fig1 = px.bar(x=discount_vs_spend.index, y=discount_vs_spend.values, labels={'x':'Diskon Diterapkan', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran dengan/tanpa Diskon')
-            st.plotly_chart(fig1, use_container_width=True)
-
-            # Average item purchased and Spending
-            items_vs_spend = df.groupby('Items Purchased')['Total Spend'].mean()
-            fig2 = px.bar(x=items_vs_spend.index, y=items_vs_spend.values, labels={'x':'Jumlah Item Dibeli', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran berdasarkan Jumlah Item Dibeli')
-            st.plotly_chart(fig2, use_container_width=True)
+        # New: Key Insights
+        st.markdown("### 💡 Key Insights")
+        
+        insights = [
+            {
+                "title": "Customer Base Health",
+                "content": f"Pelanggan aktif menunjukkan {active_customers/len(df)*100:.1f}% keterlibatan dalam 30 hari terakhir, dengan {returning_customers/len(df)*100:.1f}% kembali dalam 90 hari."
+            },
+            {
+                "title": "Revenue Distribution",
+                "content": f"Tingkat keanggotaan Gold menyumbang {membership_vs_spend['Gold']/membership_vs_spend.sum()*100:.1f}% dari total pendapatan, menunjukkan basis pelanggan yang kuat."
+            },
+            {
+                "title": "Customer Satisfaction",
+                "content": f"Tingkat kepuasan keseluruhan sebesar {satisfaction_rate:.1f}% dengan rata-rata penilaian {df['Average Rating'].mean():.1f}/5,0, menunjukkan pengalaman pelanggan yang positif."
+            },
+            {
+                "title": "Purchase Behavior",
+                "content": f"Rata-rata nilai pesanan sebesar ${df['Total Spend'].mean():.2f} dengan {df['Items Purchased'].mean():.1f} item per pembelian, menunjukkan ukuran keranjang yang cukup baik."
+            }
+        ]
+        
+        for insight in insights:
+            with st.expander(f"📌 {insight['title']}"):
+                st.write(insight['content'])
 
     elif page == "Customer Insights":
         st.header("🔍 Customer Insights & Behavior Analysis")
         
-        tab1, tab2, tab3 = st.tabs(["Demografi", "Perilaku Pembelian", "Analisis Kepuasan"])
+        tab1, tab2, tab3 = st.tabs(["Demografi", "Total Pembelian", "Analisis Kepuasan"])
         
         with tab1:
             col1, col2 = st.columns(2)
@@ -337,7 +356,7 @@ def main():
         with col1:
             # RFM Score Distribution
             fig = px.histogram(rfm_data, x='RFM_Score', 
-                             title="RFM Score Distribution",
+                             title="Distribusi score RFM",
                              nbins=30,
                              color_discrete_sequence=['#2E86AB'])
             st.plotly_chart(fig, use_container_width=True)
@@ -345,7 +364,7 @@ def main():
             # Recency vs Frequency
             fig = px.scatter(rfm_data, x='Recency', y='Frequency',
                            color='RFM_Segment',
-                           title="Recency vs Frequency by Segment",
+                           title="Recency dan Frequency berdasarkan Segment",
                            size='Monetary',
                            hover_data=['Customer ID'])
             st.plotly_chart(fig, use_container_width=True)
@@ -354,7 +373,7 @@ def main():
             # Monetary vs Frequency
             fig = px.scatter(rfm_data, x='Monetary', y='Frequency',
                            color='RFM_Segment',
-                           title="Monetary vs Frequency by Segment",
+                           title="Monetary dan Frequency berdasarkan Segment",
                            size='Recency',
                            hover_data=['Customer ID'])
             st.plotly_chart(fig, use_container_width=True)
@@ -362,7 +381,7 @@ def main():
             # Recency vs Monetary
             fig = px.scatter(rfm_data, x='Recency', y='Monetary',
                            color='RFM_Segment',
-                           title="Recency vs Monetary by Segment",
+                           title="Recency dan Monetary berdasarkan Segment",
                            size='Frequency',
                            hover_data=['Customer ID'])
             st.plotly_chart(fig, use_container_width=True)
@@ -375,20 +394,20 @@ def main():
         with col1:
             # Average Rating by Segment
             fig = px.box(df_rfm, x='RFM_Segment', y='Average Rating',
-                        title="Rating Distribution by Segment",
+                        title="Distribusi Rating berdasarkan Segment",
                         color='RFM_Segment')
             st.plotly_chart(fig, use_container_width=True)
             
             # Items Purchased by Segment
             fig = px.box(df_rfm, x='RFM_Segment', y='Items Purchased',
-                        title="Items Purchased Distribution by Segment",
+                        title="Distribusi Jumlah Item berdasarkan Segment",
                         color='RFM_Segment')
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
             # Days Since Last Purchase by Segment
             fig = px.box(df_rfm, x='RFM_Segment', y='Days Since Last Purchase',
-                        title="Days Since Last Purchase by Segment",
+                        title="Hari Terakhir Pembelian berdasarkan Segment",
                         color='RFM_Segment')
             st.plotly_chart(fig, use_container_width=True)
             
@@ -396,7 +415,7 @@ def main():
             membership_by_segment = pd.crosstab(df_rfm['RFM_Segment'], df_rfm['Membership Type'], normalize='index') * 100
             fig = px.bar(membership_by_segment.reset_index(), 
                         x='RFM_Segment', y=['Gold', 'Silver', 'Bronze'],
-                        title="Membership Type Distribution by Segment (%)",
+                        title="Distribusi Membership berdasarkan Segment (%)",
                         color_discrete_map={'Gold': '#FFD700', 'Silver': '#C0C0C0', 'Bronze': '#CD7F32'})
             st.plotly_chart(fig, use_container_width=True)
 
@@ -419,61 +438,121 @@ def main():
         # Strategic insights for each segment
         st.subheader("💡 Strategic Insights by Segment")
         
-        insights = {
-            'Top Customers': 'Pelanggan tingkat atas dengan loyalitas tinggi dan keterlibatan terbaru. Tawarkan akses VIP, penawaran eksklusif. Prioritaskan layanan pelanggan, retensi dan upselling yang dipersonalisasi.',
-            'High Value Customers (Loyal)': 'Pelanggan dengan pengeluaran konsisten yang menunjukkan loyalitas. Jaga keterlibatan mereka dengan hadiah eksklusif dan penawaran yang disesuaikan.',
-            'Medium Value Customers (Need Attention)': 'Pelanggan baru yang menunjukkan perilaku menjanjikan. Bina mereka untuk menjadi pelanggan utama melalui kampanye yang ditargetkan.',
-            'Low Value Customers (At Risk)': 'Pelanggan dengan aktivitas menurun atau keterlibatan terbaru yang rendah. Kampanye re-engagement diperlukan untuk mengembalikan mereka.',
-            'Hibernating': 'Pelanggan bernilai tinggi yang menunjukkan tanda-tanda risiko. Strategi retensi yang dipersonalisasi diperlukan segera.',
+        insights_recommendations = {
+            'Top Customers': {
+                'insight': 'Pelanggan dengan loyalitas dan keterlibatan tinggi.',
+                'recommendation': [
+                    "Memberikan **penawaran eksklusif** (bundling premium, diskon khusus).",
+                    "Implementasi **layanan pelanggan prioritas**.",
+                    "Dorong **upselling dan cross-selling** sesuai preferensi."
+                ]
+            },
+            'High Value Customers (Loyal)': {
+                'insight': 'Pelanggan dengan pengeluaran konsisten dan loyal.',
+                'recommendation': [
+                    "Memberikan **rewards loyalty berkala** (point-based atau hadiah kejutan).",
+                    "Mengirimkan **email marketing personalisasi**.",
+                    "Mempertahankan **frekuensi komunikasi** dengan chatbot/pesan otomatis terkait penawaran."
+                ]
+            },
+            'Medium Value Customers (Need Attention)': {
+                'insight': 'Pelanggan baru atau berkembang dengan potensi tinggi.',
+                'recommendation': [
+                    "Meningkatkan **onboarding campaign**.",
+                    "Menampilkan **retargeting ads** untuk produk yang pernah dilihat/dicari.",
+                    "Mengirimkan **penawaran time-sensitive/terbatas** untuk mendorong pembelian.",
+                ]
+            },
+            'Low Value Customers (At Risk)': {
+                'insight': 'Pelanggan yang mulai pasif atau tidak aktif.',
+                'recommendation': [
+                    "Mengirimkan kampanye **win-back email** dengan diskon besar atau pesan emosional.",
+                    "Memberikan survei: **'Apa yang bisa kami tingkatkan?'**",
+                    "Menawarkan rekomendasi berbasis histori.",
+                    "Menawarkan **penawaran terbatas** untuk mengembalikan pelanggan."
+                ]
+            },
+            'Hibernating': {
+                'insight': 'Pernah bernilai tinggi, kini tidak aktif / berisiko hilang.',
+                'recommendation': [
+                    "Mengirimkan pesan **reaktivasi personalisasi** berdasarkan riwayat pembelian.",
+                    "Memberikan **insentif besar untuk kembali** seperti: voucher besar, akses premium gratis.",
+                    "Menawatkan program **loyalitas atau upgrade membership**.",
+                ]
+            }
         }
-        
-        for segment, insight in insights.items():
+
+        # Menampilkan insight dna rekomendasi
+        for segment, info in insights_recommendations.items():
             if segment in segment_counts.index:
-                st.write(f"**{segment}:** {insight}")
-        
+                st.markdown(f"### 🧩 {segment}")
+                st.markdown(f"**Insight:** {info['insight']}")
+                st.markdown("**Rekomendasi:**")
+                for rec in info['recommendation']:
+                    st.markdown(f"- {rec}")
+                st.markdown("---")
         st.markdown('</div>', unsafe_allow_html=True)
     
     elif page == "Customer Segmentation (K-Means)":
         st.header("🎯 Customer Segmentation (K-Means Segmentation)")
         
-        # Perform RFM analysis
+        # Perform K-Means Clustering
         cluster_data = k_means_clustering(df)
         
         # Merge with original data for complete view
-        df_cluster = df.merge(cluster_data[['Customer ID', 'Cluster1', 'EngagementCluster', 'SeasonalCluster']], on='Customer ID', how='left')
+        df_cluster = df.merge(cluster_data[['Customer ID', 'AgeCluster', 'EngagementCluster', 'SeasonalCluster']], on='Customer ID', how='left')
     
-        tab1, tab2, tab3 = st.tabs(["Total Spend, Age, And Item Purchased", "Engagement-Based Clustering", "Seasonal Clustering"])
+        tab1, tab2, tab3 = st.tabs(["Age Clustering", "Engagement-Based Clustering", "Seasonal Clustering"])
         
         with tab1:
-            st.subheader('Segmentasi Berdasarkan Total Pengeluaran, Usia, dan Item Dibeli')
+            st.subheader('Segmentasi Berdasarkan Usia dan Pembelian')
 
             col1, col2 = st.columns(2)
             
             with col1:
-                fig = px.box(df, x='Cluster1', y='Total Spend', title='Total Spend by Cluster')
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # New: 3D Scatter Plot
-                fig = px.scatter_3d(df, x='Total Spend', y='Age', z='Items Purchased',
-                                  color='Cluster1',
-                                  title='3D Cluster Visualization',
-                                  opacity=0.7)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                cluster_distribution = df['Cluster1'].value_counts().sort_index()
+                cluster_distribution = df['AgeCluster'].value_counts().sort_index()
                 fig = px.bar(cluster_distribution, x=cluster_distribution.index, y=cluster_distribution.values, labels={'x':'Cluster', 'y':'Jumlah'}, title='Distribusi Cluster')
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # New: Cluster Characteristics
-                cluster_stats = df.groupby('Cluster1').agg({
-                    'Total Spend': ['mean', 'std'],
-                    'Age': ['mean', 'std'],
-                    'Items Purchased': ['mean', 'std']
-                }).round(2)
+            with col2:
+                fig = px.scatter(df, x='Age', y='Items Purchased',
+                               color='AgeCluster',
+                               size='Total Spend',
+                               title='Spending Patterns by Age Cluster')
+                st.plotly_chart(fig, use_container_width=True)
                 
-                st.write("**Cluster Characteristics:**")
-                st.dataframe(cluster_stats, use_container_width=True)
+            
+            # New: Cluster Characteristics
+            cluster_stats = df.groupby('AgeCluster').agg({
+                'Total Spend': ['mean', 'min', 'max'],
+                'Age': ['mean', 'min', 'max'],
+                'Items Purchased': ['mean', 'min', 'max']
+            }).round(2)
+
+            # AgeCluster Characteristics Analysis
+            st.markdown("### 📊 Analisis Karakteristik Cluster")
+            st.dataframe(cluster_stats, use_container_width=True)
+            
+            # Cluster Profiles
+            st.markdown("#### Profil Cluster")
+            cluster_profiles = {
+                0: {
+                    "name": "Pelanggan Bernilai Tinggi",
+                    "description": "Pelanggan dengan pengeluaran tinggi, usia menengah, dan pembelian item yang konsisten. Memiliki rating tinggi dan keterlibatan aktif.",
+                    "recommendation": "Fokus pada program loyalitas dan penawaran eksklusif."
+                },
+                1: {
+                    "name": "Pelanggan Potensial",
+                    "description": "Pelanggan dengan pengeluaran menengah, usia lebih bervariasi, dan pembelian item yang bervariasi. Memiliki potensi pertumbuhan.",
+                    "recommendation": "Meningkatkan engagement dengan program onboarding dan rekomendasi produk."
+                }
+            }
+            
+            for cluster, profile in cluster_profiles.items():
+                with st.expander(f"📌 Cluster {cluster}: {profile['name']}"):
+                    st.write(f"**Deskripsi:** {profile['description']}")
+                    st.write(f"**Rekomendasi:** {profile['recommendation']}")
+                    
 
         with tab2:
             st.subheader('Segmentation Based on Engagement')
@@ -486,16 +565,6 @@ def main():
                            labels={'x':'Cluster', 'y':'Count'}, title='Engagement Cluster Distribution')
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # New: Engagement Metrics by Cluster
-                engagement_stats = df.groupby('EngagementCluster').agg({
-                    'Days Since Last Purchase': ['mean', 'std'],
-                    'Average Rating': ['mean', 'std'],
-                    'Total Spend': ['mean', 'sum']
-                }).round(2)
-                
-                st.write("**Engagement Metrics by Cluster:**")
-                st.dataframe(engagement_stats, use_container_width=True)
-            
             with col2:
                 # New: Engagement Patterns
                 fig = px.scatter(df, x='Days Since Last Purchase', y='Average Rating',
@@ -504,18 +573,46 @@ def main():
                                title='Engagement Patterns by Cluster')
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # New: Engagement Cluster Characteristics
-                st.write("**Engagement Cluster Profiles:**")
-                engagement_profiles = {
-                    0: "Highly Engaged: Recent purchases, high ratings, and significant spending",
-                    1: "Moderately Engaged: Regular purchases with average ratings",
-                    2: "At Risk: Declining engagement and lower ratings",
-                    3: "Disengaged: Long time since last purchase and lower ratings"
-                }
-                
-                for cluster, profile in engagement_profiles.items():
-                    st.write(f"**Cluster {cluster}:** {profile}")
+            # New: Engagement Metrics by Cluster
+            engagement_stats = df.groupby('EngagementCluster').agg({
+                'Days Since Last Purchase': ['mean', 'min', 'max'],
+                'Average Rating': ['mean', 'min', 'max'],
+                'Total Spend': ['mean', 'min', 'max']
+            }).round(2)
             
+            st.write("**Engagement Metrics by Cluster:**")
+            st.dataframe(engagement_stats, use_container_width=True)
+            
+            st.markdown("#### Engagement Cluster Profile")
+
+            cluster_profiles = {
+                2: {
+                    "name": "Pelanggan Bernilai Tinggi",
+                    "description": "Pelanggan dengan ketertarikan tinggi,  pengeluaran tinggi, baru-baru ini melakukan transaksi, memiliki rating tinggi dan keterlibatan aktif. Merupakan pelanggan top",
+                    "recommendation": "Fokus pada program loyalitas dan penawaran eksklusif."
+                },
+                3: {
+                    "name": "Pelanggan Potensial",
+                    "description": "Pelanggan dengan pengeluaran tinggi, memberikan rating bagus, dan sudah agak lama bertransaksi. Memiliki potensi pertumbuhan dan pembelian kembali.",
+                    "recommendation": "Meningkatkan engagement dengan program onboarding dan rekomendasi produk."
+                },
+                1: {
+                    "name": "Pelanggan Menegah",
+                    "description": "Pelanggan dengan pengeluaran menengah, sudah jarang bertransaksi. Rating cenderung menurun dan tidak menunjukkan loyalitas yang kuat.",
+                    "recommendation": "Perlu kampanye re-engagement yang agresif dan insentif untuk kembali bertransaksi."
+                },
+                0: {
+                    "name": "Pelanggan Beresiko",
+                    "description": "Pelanggan yang melakukan pembelian baru-baru ini, namun memiliki rating rendah dan total spend minimal.",
+                    "recommendation": "Fokus pada strategi win-back dan memberikan survei untuk mengetahui keluhan."
+                }
+            }
+
+            for cluster, profile in cluster_profiles.items():
+                with st.expander(f"📌 Cluster {cluster}: {profile['name']}"):
+                    st.write(f"**Deskripsi:** {profile['description']}")
+                    st.write(f"**Rekomendasi:** {profile['recommendation']}")
+
         with tab3:
             st.subheader('Segmentation Based on Seasonal')
 
@@ -527,36 +624,60 @@ def main():
                            labels={'x':'Cluster', 'y':'Count'}, title='Seasonal Cluster Distribution')
                 st.plotly_chart(fig, use_container_width=True)
                 
+            
+            with col2:
                 # New: Seasonal Patterns
                 fig = px.scatter(df, x='Days Since Last Purchase', y='Total Spend',
                                color='SeasonalCluster',
                                size='Items Purchased',
                                title='Seasonal Purchase Patterns')
                 st.plotly_chart(fig, use_container_width=True)
+
+            # New: Seasonal Cluster Characteristics
+            seasonal_stats = df.groupby('SeasonalCluster').agg({
+                'Days Since Last Purchase': ['mean', 'min', 'max'],
+                'Total Spend': ['mean', 'sum'],
+                'Items Purchased': ['mean', 'sum']
+            }).round(2)
             
-            with col2:
-                # New: Seasonal Cluster Characteristics
-                seasonal_stats = df.groupby('SeasonalCluster').agg({
-                    'Days Since Last Purchase': ['mean', 'std'],
-                    'Total Spend': ['mean', 'sum'],
-                    'Items Purchased': ['mean', 'sum']
-                }).round(2)
-                
-                st.write("**Seasonal Cluster Metrics:**")
-                st.dataframe(seasonal_stats, use_container_width=True)
-                
-                # New: Seasonal Cluster Profiles
-                st.write("**Seasonal Cluster Profiles:**")
-                seasonal_profiles = {
-                    0: "High-Value Seasonal: Large purchases with longer intervals",
-                    1: "Regular Seasonal: Consistent purchases with moderate spending",
-                    2: "Low-Value Seasonal: Small purchases with irregular patterns",
-                    3: "Recent Seasonal: Recent purchases with varying values",
-                    4: "Dormant Seasonal: Long periods between purchases"
+            st.write("**Seasonal Cluster Metrics:**")
+            st.dataframe(seasonal_stats, use_container_width=True)
+            
+            # New: Seasonal Cluster Profiles
+            st.markdown("#### Seasonal Cluster Profiles")
+
+            seasonal_profiles = {
+                1: {
+                    "name": "Pelanggan Musiman Bernilai Tinggi",
+                    "description": "Melakukan pembelian besar namun jarang. Pola berulang secara musiman dengan kontribusi pendapatan tinggi.",
+                    "recommendation": "Berikan penawaran eksklusif saat musim pembelian mereka tiba dan dorong pembelian tambahan melalui bundling musiman."
+                },
+                3: {
+                    "name": "Pelanggan Musiman Reguler",
+                    "description": "Melakukan pembelian secara konsisten di musim tertentu dengan pengeluaran sedang.",
+                    "recommendation": "Kirimkan pengingat dan promosi pra-musim untuk meningkatkan keterlibatan dan frekuensi pembelian."
+                },
+                0: {
+                    "name": "Pelanggan Musiman Bernilai Rendah",
+                    "description": "Pola pembelian tidak konsisten dan nilai transaksi kecil, namun tetap mengikuti musim tertentu.",
+                    "recommendation": "Dorong engagement melalui diskon musiman atau program loyalitas mikro (contoh: cashback kecil atau free shipping)."
+                },
+                4: {
+                    "name": "Pelanggan Musiman Baru",
+                    "description": "Melakukan pembelian baru-baru ini dengan nilai yang bervariasi, belum memiliki pola tetap.",
+                    "recommendation": "Lakukan onboarding personalisasi dan analisis preferensi untuk mengarahkan mereka ke kategori musiman tertentu."
+                },
+                2: {
+                    "name": "Pelanggan Musiman Tidak Aktif",
+                    "description": "Sudah agak lama tidak bertransaksi, bahkan di musim-musim yang biasanya aktif.",
+                    "recommendation": "Kampanye win-back dengan urgensi musiman (contoh: 'Promo Musim Terakhir') dan penawaran eksklusif."
                 }
-                
-                for cluster, profile in seasonal_profiles.items():
-                    st.write(f"**Cluster {cluster}:** {profile}")
+            }
+
+            for cluster, profile in seasonal_profiles.items():
+                with st.expander(f"📌 Cluster {cluster}: {profile['name']}"):
+                    st.write(f"**Deskripsi:** {profile['description']}")
+                    st.write(f"**Rekomendasi:** {profile['recommendation']}")
 
     elif page == "Churn Analysis":
         st.header("⚠️ Customer Churn Analysis")
@@ -596,15 +717,15 @@ def main():
         # Retention strategies
         st.subheader("🛡️ Strategi Retensi")
         st.write("""
-        **Tindakan Segera:**
-        - Kirim email re-engagement yang dipersonalisasi ke pelanggan yang tidak aktif selama 45+ hari
-        - Tawarkan diskon eksklusif untuk pelanggan yang tidak puas
-        - Implementasikan survei keluar untuk memahami alasan ketidakpuasan
+        **Strategi Jangka Pendek:**
+        - Mengirimkan email re-engagement yang dipersonalisasi ke pelanggan yang tidak aktif selama 45+ hari
+        - Menawarkan diskon eksklusif untuk pelanggan
+        - Mengimplementasikan survei untuk memahami alasan ketidakpuasan
         
         **Strategi Jangka Panjang:**
-        - Tingkatkan layanan pelanggan untuk pengalaman dengan rating rendah
-        - Kembangkan program loyalitas untuk pembeli yang sering
-        - Buat konten yang ditargetkan untuk segmen pelanggan yang berbeda
+        - Meningkatkan layanan pelanggan untuk pengalaman dengan rating rendah
+        - Mengembangkan program loyalitas untuk pembeli yang loyal
+        - Membuat konten lebih terpersonalisasi dengan riwayat pengguna dan segmen pelanggan
         """)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -621,31 +742,31 @@ def main():
         avg_clv = df['Total Spend'].mean()
         satisfaction_rate = (df['Satisfaction Level'] == 'Satisfied').mean() * 100
         
-        st.markdown('<div class="insight-box">', unsafe_allow_html=True)
         st.subheader("📊 Analisis Kondisi Saat Ini")
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Tingkat Churn", f"{churn_rate:.1f}%", delta="-2.3%" if churn_rate < 25 else "+1.5%")
+            st.metric("Tingkat Churn", f"{churn_rate:.1f}%")
         with col2:
-            st.metric("Rata-rata Nilai Pelanggan", f"${avg_clv:.2f}", delta="+$45.20")
+            st.metric("Rata-rata Nilai Pelanggan", f"${avg_clv:.2f}")
         with col3:
-            st.metric("Tingkat Kepuasan", f"{satisfaction_rate:.1f}%", delta="+3.2%")
+            st.metric("Tingkat Kepuasan", f"{satisfaction_rate:.1f}%")
         
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Strategic recommendations
-        st.subheader("🎯 Strategi CRM yang Diprioritaskan")
+        # Strategic recommendations based on analysis
+        st.subheader("🎯 Rangkuman Strategi Berdasarkan Analisis")
         
         strategies = [
             {
                 "priority": "TINGGI",
                 "title": "Program Retensi Pelanggan",
-                "description": "Implementasikan kampanye retensi yang ditargetkan untuk pelanggan berisiko",
+                "description": "Implementasikan kampanye retensi yang ditargetkan untuk pelanggan berisiko berdasarkan analisis RFM dan K-Means",
                 "actions": [
-                    "Kirim email win-back yang dipersonalisasi ke pelanggan yang tidak aktif selama 30+ hari",
-                    "Tawarkan diskon eksklusif untuk pelanggan yang tidak puas",
-                    "Buat saluran dukungan VIP untuk anggota Gold yang berisiko"
+                    "Kirim email win-back yang dipersonalisasi ke pelanggan Hibernating dan Low Value",
+                    "Tawarkan diskon eksklusif untuk pelanggan dengan rating rendah",
+                    "Buat saluran dukungan VIP untuk anggota Gold yang berisiko churn",
+                    "Implementasikan program loyalitas berbasis poin untuk pelanggan Medium Value"
                 ],
                 "expected_impact": "Kurangi tingkat churn sebesar 15-20%",
                 "timeline": "1-2 bulan"
@@ -653,11 +774,12 @@ def main():
             {
                 "priority": "TINGGI",
                 "title": "Strategi Segmentasi Pelanggan",
-                "description": "Kembangkan kampanye pemasaran yang ditargetkan untuk setiap segmen pelanggan",
+                "description": "Kembangkan kampanye pemasaran yang ditargetkan untuk setiap segmen pelanggan berdasarkan analisis RFM dan K-Means",
                 "actions": [
-                    "Buat rekomendasi produk premium untuk Pelanggan Utama",
-                    "Rancang hadiah loyalitas untuk pelanggan reguler",
-                    "Implementasikan kampanye onboarding untuk pelanggan baru"
+                    "Buat rekomendasi produk premium untuk Top Customers dan High Value Customers",
+                    "Rancang hadiah loyalitas untuk pelanggan dengan Engagement Cluster tinggi",
+                    "Implementasikan kampanye onboarding untuk pelanggan baru",
+                    "Kembangkan program khusus untuk pelanggan Seasonal dengan nilai tinggi"
                 ],
                 "expected_impact": "Tingkatkan nilai seumur hidup pelanggan sebesar 25%",
                 "timeline": "2-3 bulan"
@@ -665,11 +787,12 @@ def main():
             {
                 "priority": "SEDANG",
                 "title": "Peningkatan Pengalaman Pelanggan",
-                "description": "Tingkatkan kepuasan pelanggan dan kualitas layanan secara keseluruhan",
+                "description": "Tingkatkan kepuasan pelanggan dan kualitas layanan berdasarkan analisis kepuasan dan rating",
                 "actions": [
                     "Implementasikan sistem umpan balik pelanggan real-time",
                     "Tingkatkan waktu respons layanan pelanggan",
-                    "Personalisasi rekomendasi produk berdasarkan riwayat pembelian"
+                    "Personalisasi rekomendasi produk berdasarkan riwayat pembelian",
+                    "Kembangkan program pelatihan untuk tim layanan pelanggan"
                 ],
                 "expected_impact": "Tingkatkan tingkat kepuasan hingga 85%+",
                 "timeline": "3-4 bulan"
@@ -677,11 +800,12 @@ def main():
             {
                 "priority": "SEDANG",
                 "title": "Implementasi Analitik Prediktif",
-                "description": "Gunakan wawasan berbasis data untuk manajemen pelanggan proaktif",
+                "description": "Gunakan wawasan berbasis data untuk manajemen pelanggan proaktif berdasarkan model prediksi",
                 "actions": [
                     "Terapkan model prediksi churn untuk intervensi dini",
                     "Implementasikan prediksi nilai seumur hidup pelanggan",
-                    "Buat peringatan otomatis untuk perubahan perilaku pelanggan"
+                    "Buat peringatan otomatis untuk perubahan perilaku pelanggan",
+                    "Kembangkan dashboard analitik real-time untuk monitoring"
                 ],
                 "expected_impact": "Tingkatkan retensi pelanggan sebesar 30%",
                 "timeline": "4-6 bulan"
@@ -701,7 +825,57 @@ def main():
                 with col2:
                     st.write(f"**Timeline Implementasi:** {strategy['timeline']}")
         
-        # ROI Projections
+        # Detailed Campaign Strategies
+        st.subheader("📢 Detail Strategi Kampanye")
+        
+        campaign_strategies = {
+            "Kampanye Retensi": {
+                "Target": ["Hibernating", "Low Value Customers", "Pelanggan dengan Rating Rendah"],
+                "Channel": ["Email", "SMS", "Push Notification"],
+                "Taktik": [
+                    "Email win-back dengan diskon 20%",
+                    "Program 'Come Back' dengan hadiah loyalitas",
+                    "Survei kepuasan dengan insentif",
+                    "Penawaran eksklusif untuk pembelian pertama"
+                ]
+            },
+            "Kampanye Loyalitas": {
+                "Target": ["Top Customers", "High Value Customers", "Pelanggan dengan Engagement Tinggi"],
+                "Channel": ["Email", "Aplikasi Mobile", "Website"],
+                "Taktik": [
+                    "Program poin loyalitas premium",
+                    "Akses awal ke produk baru",
+                    "Hadiah ulang tahun spesial",
+                    "Event eksklusif untuk anggota"
+                ]
+            },
+            "Kampanye Reaktivasi": {
+                "Target": ["Medium Value Customers", "Pelanggan Musiman"],
+                "Channel": ["Email", "Social Media", "Display Ads"],
+                "Taktik": [
+                    "Rekomendasi produk personalisasi",
+                    "Flash sale dengan notifikasi",
+                    "Program referral dengan bonus",
+                    "Konten edukasi produk"
+                ]
+            }
+        }
+        
+        for campaign, details in campaign_strategies.items():
+            with st.expander(f"🎯 {campaign}"):
+                st.write("**Target Audience:**")
+                for target in details["Target"]:
+                    st.write(f"• {target}")
+                
+                st.write("**Channel Komunikasi:**")
+                for channel in details["Channel"]:
+                    st.write(f"• {channel}")
+                
+                st.write("**Taktik Kampanye:**")
+                for tactic in details["Taktik"]:
+                    st.write(f"• {tactic}")
+        
+         # ROI Projections
         st.subheader("💰 Proyeksi ROI yang Diharapkan")
         
         roi_data = {
@@ -720,8 +894,8 @@ def main():
                     text='ROI (%)')
         fig.update_traces(texttemplate='%{text}%', textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
-        
-        # Implementation roadmap
+
+        # Implementation Roadmap
         st.subheader("🗓️ Peta Jalan Implementasi")
         
         roadmap_data = {
@@ -741,6 +915,35 @@ def main():
                            color='Strategy', title="Peta Jalan Implementasi 6 Bulan",
                            color_discrete_sequence=['#2E86AB', '#A23B72', '#F18F01', '#6A994E'])
         st.plotly_chart(fig_roadmap, use_container_width=True)
+        
+        # Success Metrics
+        st.subheader("📈 Metrik Keberhasilan")
+        
+        success_metrics = {
+            "Metrik Utama": [
+                "Penurunan tingkat churn sebesar 15-20%",
+                "Peningkatan nilai seumur hidup pelanggan sebesar 25%",
+                "Peningkatan tingkat kepuasan hingga 85%+",
+                "Peningkatan retensi pelanggan sebesar 30%"
+            ],
+            "Metrik Pendukung": [
+                "Peningkatan engagement rate sebesar 40%",
+                "Peningkatan konversi email sebesar 25%",
+                "Peningkatan nilai rata-rata pesanan sebesar 15%",
+                "Peningkatan skor NPS sebesar 20 poin"
+            ]
+        }
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("**Metrik Utama:**")
+            for metric in success_metrics["Metrik Utama"]:
+                st.write(f"• {metric}")
+        
+        with col2:
+            st.write("**Metrik Pendukung:**")
+            for metric in success_metrics["Metrik Pendukung"]:
+                st.write(f"• {metric}")
 
 # RFM Analysis
 def perform_rfm_analysis(df):
@@ -795,7 +998,7 @@ def k_means_clustering(df):
     X_scaled = scaler.fit_transform(X)
     k = 2
     kmeans = KMeans(n_clusters=k, random_state=42)
-    df['Cluster1'] = kmeans.fit_predict(X_scaled)
+    df['AgeCluster'] = kmeans.fit_predict(X_scaled)
 
     X_engagement = df[['Days Since Last Purchase', 'Average Rating', 'Discount Applied']]
     scaler_engagement = StandardScaler()
