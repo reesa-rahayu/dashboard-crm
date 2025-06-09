@@ -71,6 +71,11 @@ def main():
     ["Overview", "Customer Insights", "Customer Segmentation (RFM)","Customer Segmentation (K-Means)","Churn Analysis", "Strategic Recommendations"]
     )
     
+    # Add dataset link at bottom of sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📁 Dataset")
+    st.sidebar.markdown("[Download Customer Dataset](https://www.kaggle.com/datasets/uom190346a/e-commerce-customer-behavior-datasets)")
+    
     if page == "Overview":
         st.header("📈 Business Overview")
         
