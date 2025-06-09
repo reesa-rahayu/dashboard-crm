@@ -316,7 +316,7 @@ def main():
             # Segment distribution
             segment_counts = rfm_data['RFM_Segment'].value_counts()
             fig1 = px.pie(values=segment_counts.values, names=segment_counts.index,
-                         title="Distribusi Segmen Pelanggan")
+                         title="Customer Segment Distribution")
             st.plotly_chart(fig1, use_container_width=True)
         
         with col2:
@@ -328,7 +328,78 @@ def main():
                          color_continuous_scale='Blues')
             fig2.update_layout(xaxis_title="Segmen Pelanggan", yaxis_title="Total Pendapatan ($)")
             st.plotly_chart(fig2, use_container_width=True)
+
+        # New RFM Analysis Section
+        st.subheader("📊 RFM Score Analysis")
         
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # RFM Score Distribution
+            fig = px.histogram(rfm_data, x='RFM_Score', 
+                             title="RFM Score Distribution",
+                             nbins=30,
+                             color_discrete_sequence=['#2E86AB'])
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Recency vs Frequency
+            fig = px.scatter(rfm_data, x='Recency', y='Frequency',
+                           color='RFM_Segment',
+                           title="Recency vs Frequency by Segment",
+                           size='Monetary',
+                           hover_data=['Customer ID'])
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Monetary vs Frequency
+            fig = px.scatter(rfm_data, x='Monetary', y='Frequency',
+                           color='RFM_Segment',
+                           title="Monetary vs Frequency by Segment",
+                           size='Recency',
+                           hover_data=['Customer ID'])
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Recency vs Monetary
+            fig = px.scatter(rfm_data, x='Recency', y='Monetary',
+                           color='RFM_Segment',
+                           title="Recency vs Monetary by Segment",
+                           size='Frequency',
+                           hover_data=['Customer ID'])
+            st.plotly_chart(fig, use_container_width=True)
+
+        # New Segment Behavior Analysis
+        st.subheader("🎯 Segment Behavior Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Average Rating by Segment
+            fig = px.box(df_rfm, x='RFM_Segment', y='Average Rating',
+                        title="Rating Distribution by Segment",
+                        color='RFM_Segment')
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Items Purchased by Segment
+            fig = px.box(df_rfm, x='RFM_Segment', y='Items Purchased',
+                        title="Items Purchased Distribution by Segment",
+                        color='RFM_Segment')
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Days Since Last Purchase by Segment
+            fig = px.box(df_rfm, x='RFM_Segment', y='Days Since Last Purchase',
+                        title="Days Since Last Purchase by Segment",
+                        color='RFM_Segment')
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Membership Type Distribution by Segment
+            membership_by_segment = pd.crosstab(df_rfm['RFM_Segment'], df_rfm['Membership Type'], normalize='index') * 100
+            fig = px.bar(membership_by_segment.reset_index(), 
+                        x='RFM_Segment', y=['Gold', 'Silver', 'Bronze'],
+                        title="Membership Type Distribution by Segment (%)",
+                        color_discrete_map={'Gold': '#FFD700', 'Silver': '#C0C0C0', 'Bronze': '#CD7F32'})
+            st.plotly_chart(fig, use_container_width=True)
+
         # Detailed segment analysis
         st.subheader("📊 Analisis Segmen")
         
@@ -346,7 +417,7 @@ def main():
         st.dataframe(segment_summary, use_container_width=True)
         
         # Strategic insights for each segment
-        st.subheader("💡 Wawasan Strategis per Segmen")
+        st.subheader("💡 Strategic Insights by Segment")
         
         insights = {
             'Top Customers': 'Pelanggan tingkat atas dengan loyalitas tinggi dan keterlibatan terbaru. Tawarkan akses VIP, penawaran eksklusif. Prioritaskan layanan pelanggan, retensi dan upselling yang dipersonalisasi.',
@@ -363,7 +434,7 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
     
     elif page == "Customer Segmentation (K-Means)":
-        st.header("🎯 Customer Segmentation (K-Means Segementation)")
+        st.header("🎯 Customer Segmentation (K-Means Segmentation)")
         
         # Perform RFM analysis
         cluster_data = k_means_clustering(df)
@@ -371,7 +442,7 @@ def main():
         # Merge with original data for complete view
         df_cluster = df.merge(cluster_data[['Customer ID', 'Cluster1', 'EngagementCluster', 'SeasonalCluster']], on='Customer ID', how='left')
     
-        tab1, tab2, tab3 = st.tabs(["Total Pengeluaran, Usia, dan Item Dibeli", "Segmentasi Berbasis Keterlibatan", "Segmentasi Musiman"])
+        tab1, tab2, tab3 = st.tabs(["Total Spend, Age, And Item Purchased", "Engagement-Based Clustering", "Seasonal Clustering"])
         
         with tab1:
             st.subheader('Segmentasi Berdasarkan Total Pengeluaran, Usia, dan Item Dibeli')
@@ -379,28 +450,114 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                fig = px.box(df, x='Cluster1', y='Total Spend', title='Total Pengeluaran berdasarkan Cluster')
+                fig = px.box(df, x='Cluster1', y='Total Spend', title='Total Spend by Cluster')
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # New: 3D Scatter Plot
+                fig = px.scatter_3d(df, x='Total Spend', y='Age', z='Items Purchased',
+                                  color='Cluster1',
+                                  title='3D Cluster Visualization',
+                                  opacity=0.7)
                 st.plotly_chart(fig, use_container_width=True)
             
             with col2:
                 cluster_distribution = df['Cluster1'].value_counts().sort_index()
                 fig = px.bar(cluster_distribution, x=cluster_distribution.index, y=cluster_distribution.values, labels={'x':'Cluster', 'y':'Jumlah'}, title='Distribusi Cluster')
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # New: Cluster Characteristics
+                cluster_stats = df.groupby('Cluster1').agg({
+                    'Total Spend': ['mean', 'std'],
+                    'Age': ['mean', 'std'],
+                    'Items Purchased': ['mean', 'std']
+                }).round(2)
+                
+                st.write("**Cluster Characteristics:**")
+                st.dataframe(cluster_stats, use_container_width=True)
 
         with tab2:
-            st.subheader('Segmentasi Berdasarkan Keterlibatan')
+            st.subheader('Segmentation Based on Engagement')
 
-            cluster_distribution = df['EngagementCluster'].value_counts().sort_index()
-            fig = px.bar(cluster_distribution, x=cluster_distribution.index, y=cluster_distribution.values, labels={'x':'Cluster', 'y':'Jumlah'}, title='Distribusi Cluster Keterlibatan')
-            st.plotly_chart(fig, use_container_width=True)
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                cluster_distribution = df['EngagementCluster'].value_counts().sort_index()
+                fig = px.bar(cluster_distribution, x=cluster_distribution.index, y=cluster_distribution.values, 
+                           labels={'x':'Cluster', 'y':'Count'}, title='Engagement Cluster Distribution')
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # New: Engagement Metrics by Cluster
+                engagement_stats = df.groupby('EngagementCluster').agg({
+                    'Days Since Last Purchase': ['mean', 'std'],
+                    'Average Rating': ['mean', 'std'],
+                    'Total Spend': ['mean', 'sum']
+                }).round(2)
+                
+                st.write("**Engagement Metrics by Cluster:**")
+                st.dataframe(engagement_stats, use_container_width=True)
+            
+            with col2:
+                # New: Engagement Patterns
+                fig = px.scatter(df, x='Days Since Last Purchase', y='Average Rating',
+                               color='EngagementCluster',
+                               size='Total Spend',
+                               title='Engagement Patterns by Cluster')
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # New: Engagement Cluster Characteristics
+                st.write("**Engagement Cluster Profiles:**")
+                engagement_profiles = {
+                    0: "Highly Engaged: Recent purchases, high ratings, and significant spending",
+                    1: "Moderately Engaged: Regular purchases with average ratings",
+                    2: "At Risk: Declining engagement and lower ratings",
+                    3: "Disengaged: Long time since last purchase and lower ratings"
+                }
+                
+                for cluster, profile in engagement_profiles.items():
+                    st.write(f"**Cluster {cluster}:** {profile}")
             
         with tab3:
-            st.subheader('Segmentasi Berdasarkan Musiman')
+            st.subheader('Segmentation Based on Seasonal')
 
-            cluster_distribution = df['SeasonalCluster'].value_counts().sort_index()
-            fig = px.bar(cluster_distribution, x=cluster_distribution.index, y=cluster_distribution.values, labels={'x':'Cluster', 'y':'Jumlah'}, title='Distribusi Cluster Musiman')
-            st.plotly_chart(fig, use_container_width=True)
+            col1, col2 = st.columns(2)
             
+            with col1:
+                cluster_distribution = df['SeasonalCluster'].value_counts().sort_index()
+                fig = px.bar(cluster_distribution, x=cluster_distribution.index, y=cluster_distribution.values, 
+                           labels={'x':'Cluster', 'y':'Count'}, title='Seasonal Cluster Distribution')
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # New: Seasonal Patterns
+                fig = px.scatter(df, x='Days Since Last Purchase', y='Total Spend',
+                               color='SeasonalCluster',
+                               size='Items Purchased',
+                               title='Seasonal Purchase Patterns')
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # New: Seasonal Cluster Characteristics
+                seasonal_stats = df.groupby('SeasonalCluster').agg({
+                    'Days Since Last Purchase': ['mean', 'std'],
+                    'Total Spend': ['mean', 'sum'],
+                    'Items Purchased': ['mean', 'sum']
+                }).round(2)
+                
+                st.write("**Seasonal Cluster Metrics:**")
+                st.dataframe(seasonal_stats, use_container_width=True)
+                
+                # New: Seasonal Cluster Profiles
+                st.write("**Seasonal Cluster Profiles:**")
+                seasonal_profiles = {
+                    0: "High-Value Seasonal: Large purchases with longer intervals",
+                    1: "Regular Seasonal: Consistent purchases with moderate spending",
+                    2: "Low-Value Seasonal: Small purchases with irregular patterns",
+                    3: "Recent Seasonal: Recent purchases with varying values",
+                    4: "Dormant Seasonal: Long periods between purchases"
+                }
+                
+                for cluster, profile in seasonal_profiles.items():
+                    st.write(f"**Cluster {cluster}:** {profile}")
+
     elif page == "Churn Analysis":
         st.header("⚠️ Customer Churn Analysis")
         
