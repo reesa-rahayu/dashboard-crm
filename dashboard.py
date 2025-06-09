@@ -48,6 +48,31 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Define consistent color palette
+COLOR_PALETTE = {
+    'primary': '#2E86AB',      # Main blue
+    'secondary': '#A23B72',    # Purple
+    'accent': '#F18F01',       # Orange
+    'success': '#6A994E',      # Green
+    'warning': '#E9C46A',      # Yellow
+    'danger': '#E76F51',       # Red
+    'neutral': '#264653',      # Dark blue
+    'light': '#E8F4F8'         # Light blue
+}
+
+# Update color sequences for plots
+COLOR_SEQUENCE = [COLOR_PALETTE['primary'], COLOR_PALETTE['secondary'], 
+                 COLOR_PALETTE['accent'], COLOR_PALETTE['success'],
+                 COLOR_PALETTE['warning'], COLOR_PALETTE['danger']]
+
+# Update color scales
+COLOR_SCALES = {
+    'blues': ['#E8F4F8', '#2E86AB', '#264653'],
+    'purples': ['#F3E5F5', '#A23B72', '#4A148C'],
+    'oranges': ['#FFF3E0', '#F18F01', '#E65100'],
+    'greens': ['#E8F5E9', '#6A994E', '#1B5E20']
+}
+
 # Load and cache data
 @st.cache_data
 def load_data():
@@ -116,18 +141,24 @@ def main():
             # Customer Activity Trends
             fig = px.line(df.groupby('Days Since Last Purchase').size().reset_index(name='count'),
                          x='Days Since Last Purchase', y='count',
-                         title='Aktivitas Customer')
+                         title='Aktivitas Customer',
+                         color_discrete_sequence=[COLOR_PALETTE['primary']])
             st.plotly_chart(fig, use_container_width=True)
-
 
             # Average item purchased and Spending
             items_vs_spend = df.groupby('Items Purchased')['Total Spend'].mean()
-            fig2 = px.bar(x=items_vs_spend.index, y=items_vs_spend.values, labels={'x':'Jumlah Item Dibeli', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran berdasarkan Jumlah Item Dibeli')
+            fig2 = px.bar(x=items_vs_spend.index, y=items_vs_spend.values, 
+                         labels={'x':'Jumlah Item Dibeli', 'y':'Rata-rata Pengeluaran'}, 
+                         title='Rata-rata Pengeluaran berdasarkan Jumlah Item Dibeli',
+                         color_discrete_sequence=[COLOR_PALETTE['secondary']])
             st.plotly_chart(fig2, use_container_width=True)
 
             # Average Spending with/without Discounts
             discount_vs_spend = df.groupby('Discount Applied')['Total Spend'].mean()
-            fig1 = px.bar(x=discount_vs_spend.index, y=discount_vs_spend.values, labels={'x':'Diskon Diterapkan', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran dengan/tanpa Diskon')
+            fig1 = px.bar(x=discount_vs_spend.index, y=discount_vs_spend.values, 
+                         labels={'x':'Diskon Diterapkan', 'y':'Rata-rata Pengeluaran'}, 
+                         title='Rata-rata Pengeluaran dengan/tanpa Diskon',
+                         color_discrete_sequence=[COLOR_PALETTE['accent']])
             st.plotly_chart(fig1, use_container_width=True)
 
         
@@ -137,12 +168,16 @@ def main():
             df_rfm = df.merge(rfm_data[['Customer ID', 'RFM_Segment']], on='Customer ID', how='left')
             segment_counts = rfm_data['RFM_Segment'].value_counts()
             fig1 = px.pie(values=segment_counts.values, names=segment_counts.index,
-                         title="Segmentasi Pelanggan RFM")
+                         title="Segmentasi Pelanggan RFM",
+                         color_discrete_sequence=COLOR_SEQUENCE)
             st.plotly_chart(fig1, use_container_width=True)
             
             # Revenue by Membership Type
             membership_vs_spend = df.groupby('Membership Type')['Total Spend'].mean()
-            fig1 = px.bar(x=membership_vs_spend.index, y=membership_vs_spend.values, labels={'x':'Tipe Keanggotaan', 'y':'Rata-rata Pengeluaran'}, title='Rata-rata Pengeluaran berdasarkan Tipe Keanggotaan')
+            fig1 = px.bar(x=membership_vs_spend.index, y=membership_vs_spend.values, 
+                         labels={'x':'Tipe Keanggotaan', 'y':'Rata-rata Pengeluaran'}, 
+                         title='Rata-rata Pengeluaran berdasarkan Tipe Keanggotaan',
+                         color_discrete_sequence=[COLOR_PALETTE['primary'], COLOR_PALETTE['secondary'], COLOR_PALETTE['accent']])
             st.plotly_chart(fig1, use_container_width=True)
 
             # Customer Satisfaction by City
@@ -150,7 +185,7 @@ def main():
             fig2 = px.bar(satisfaction_by_city.reset_index(), x='City', 
                          y=['Satisfied', 'Neutral', 'Unsatisfied'],
                          title="Kepuasan Pelanggan berdasarkan Kota",
-                         color_discrete_sequence=['#2E86AB', '#A23B72', '#F18F01'])
+                         color_discrete_sequence=[COLOR_PALETTE['success'], COLOR_PALETTE['warning'], COLOR_PALETTE['danger']])
             st.plotly_chart(fig2, use_container_width=True)
         
         # New: Key Insights
@@ -190,13 +225,14 @@ def main():
             with col1:
                 # Age distribution
                 fig1 = px.histogram(df, x='Age', nbins=20, title="Distribusi Usia",
-                                   color_discrete_sequence=['#2E86AB'])
+                                   color_discrete_sequence=[COLOR_PALETTE['primary']])
                 st.plotly_chart(fig1, use_container_width=True)
                 
                 # Gender distribution
                 gender_counts = df['Gender'].value_counts()
                 fig3 = px.pie(values=gender_counts.values, names=gender_counts.index,
-                             title="Distribusi Gender")
+                             title="Distribusi Gender",
+                             color_discrete_sequence=[COLOR_PALETTE['secondary'], COLOR_PALETTE['accent']])
                 st.plotly_chart(fig3, use_container_width=True)
 
                 # City distribution
@@ -204,7 +240,7 @@ def main():
                 fig3 = px.bar(x=city_counts.values, y=city_counts.index,
                              title="Pelanggan berdasarkan Kota", orientation='h',
                              color=city_counts.values,
-                             color_continuous_scale='Blues')
+                             color_continuous_scale=COLOR_SCALES['blues'])
                 st.plotly_chart(fig3, use_container_width=True)
             
             with col2:
@@ -223,8 +259,7 @@ def main():
                 membership_counts = df['Membership Type'].value_counts()
                 fig4 = px.bar(x=membership_counts.index, y=membership_counts.values,
                              title="Distribusi Tipe Keanggotaan",
-                             color=['Gold', 'Silver', 'Bronze'],
-                             color_discrete_map={'Gold': '#FFD700', 'Silver': '#C0C0C0', 'Bronze': '#CD7F32'})
+                             color_discrete_sequence=[COLOR_PALETTE['primary'], COLOR_PALETTE['secondary'], COLOR_PALETTE['accent']])
                 st.plotly_chart(fig4, use_container_width=True)
         
         with tab2:
@@ -716,7 +751,7 @@ def main():
                         title="Faktor yang Mempengaruhi Churn Pelanggan",
                         orientation='h',
                         color='Importance',
-                        color_continuous_scale='Viridis')
+                        color_continuous_scale=COLOR_SCALES['purples'])
         st.plotly_chart(fig2, use_container_width=True)
 
         # Retention strategies
@@ -895,7 +930,7 @@ def main():
         fig = px.bar(roi_df, x='Strategy', y='ROI (%)',
                     title="ROI yang Diharapkan per Strategi CRM",
                     color='ROI (%)',
-                    color_continuous_scale='Greens',
+                    color_continuous_scale=COLOR_SCALES['greens'],
                     text='ROI (%)')
         fig.update_traces(texttemplate='%{text}%', textposition='outside')
         st.plotly_chart(fig, use_container_width=True)
@@ -918,7 +953,10 @@ def main():
         
         fig_roadmap = px.bar(roadmap_melted, x='Month', y='Completion %',
                            color='Strategy', title="Peta Jalan Implementasi 6 Bulan",
-                           color_discrete_sequence=['#2E86AB', '#A23B72', '#F18F01', '#6A994E'])
+                           color_discrete_sequence=[COLOR_PALETTE['primary'], 
+                                                      COLOR_PALETTE['secondary'], 
+                                                      COLOR_PALETTE['accent'], 
+                                                      COLOR_PALETTE['success']])
         st.plotly_chart(fig_roadmap, use_container_width=True)
         
         # Success Metrics
